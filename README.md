@@ -1,37 +1,33 @@
-# Traffic Simulator
+# Home Buying Comparison Tool
 
 [![Build Status](https://travis-ci.org/mwkracht/homecomp.svg?branch=master)](https://travis-ci.org/mwkracht/homecomp)
 [![Coverage Status](https://coveralls.io/repos/github/mwkracht/homecomp/badge.svg?branch=master)](https://coveralls.io/github/mwkracht/homecomp?branch=master)
 
-This code originated as a coding project for an interview. Currently, it is only being mainatined it as an example python project that can be used to get other python projects off the ground faster. I will continue to incorporate any useful patterns for python packaging (i.e. how to run tests, hook into CI builds, setup logging, handle init importing, etc.) as I run across them.
+This project was created in order to compare value over time between buying (or renting) different
+properties. There are a lot of existing buy vs. rent calculators available but it is much harder
+to come by a tool for comparing the value of buying different properties.
 
-The package should generally work but the code content is not going to be expanded. Test coverage will not be expanded either unless it provides an opportunity to show a useful testing pattern.
+The tool will give a projection over time of the impact of buying a certain home will have on your
+networth assuming you have a fixed monthly housing budget and a lump sum of cash available for any
+down payment.
 
-#### Usage Instructions
+This tool is proabably not useful if most housing options are relativey similar. In Washington DC
+housing options vary widely from row homes with no HOAs, to condo units with HOAs into the 1k+
+range, and rental options which is what drove the creation of this tool.
 
-Provided is a trafficsim command line utility (traffic-simulator) that will all for the running of simple one traffic light simulations. The usage of that script follow:
+#### Usage
 
-```shell
-usage: traffic-simulator [-h] red_ms yellow_ms green_ms [step]
-
-Run Simple Traffic Signal Simulator. To safely exit the simulation press 'q'.
-
-positional arguments:
-  red_ms      Duration in ms for red light
-  yellow_ms   Duration in ms for yellow light
-  green_ms    Duration in ms for green light
-  step        Duration in ms for simulation step. Defaults to 100ms
-
-optional arguments:
-  -h, --help  show this help message and exit
-```
-
-This simulator will run indefinitely until a user safely exits by pressing the 'q' key. The trafficsim package will need to be installed prior to running the traffic-simulator script.
-
-An example usage of the traffic-simulator utility for a traffic light sim where each light cycles every second:
+The package will install a command line utilty which can be used to model different housing options:
 
 ```shell
-traffic-simulator 1000 1000 1000
+Usage: homecomp [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  buy   Subset of simulations available for buying housing
+  rent  Subset of simulations available for renting housing
 ```
 
 #### Package Installation
@@ -39,15 +35,21 @@ traffic-simulator 1000 1000 1000
 Use pip to install this repository.
 
 ```shell
-git clone git@github.com:mwkracht/trafficsim.git
-pip install trafficsim
+pip install homecomp
+```
+
+If developing, run the following command in the base repository directory:
+
+```shell
+pip install -e .
 ```
 
 #### Running Tests
 
-All tests and linting is run using tox. Tox can be installed using pip.
+All tests and linting are run using tox. Tox can be installed using pip (`pip install tox`). Run
+the following command within the base repository directory:
 
 ```shell
-tox -c <path to trafficsim>/tox.ini
+tox
 ```
 
