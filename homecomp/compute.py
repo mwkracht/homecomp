@@ -13,7 +13,7 @@ def compute(budget: MonthlyBudget,
 
     return [
         next(computation)
-        for i in range(periods)
+        for _ in range(periods)
     ]
 
 
@@ -23,11 +23,11 @@ def compute_iter(budget: MonthlyBudget,
     Budget computation iterator where each item returned is a single period's budget.
     """
     while True:
-        expenses = []
+        m_expenses = []
+        m_budget = budget.new()
 
         for budget_item in budget_items:
-            expenses.append(budget_item.step(budget))
-            budget -= expenses[-1]
+            m_expenses.append(budget_item.step(m_budget))
+            m_budget -= m_expenses[-1]
 
-        # import pdb;pdb.set_trace()
-        yield MonthlyExpense.join('total', expenses)
+        yield MonthlyExpense.join('total', m_expenses)

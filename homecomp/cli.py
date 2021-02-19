@@ -94,7 +94,7 @@ def simple(cash, budget, price, hoa, premium, time, output):
 
     budget = MonthlyBudget(budget)
 
-    compute(
+    expenses = compute(
         budget,
         budget_items,
         periods=periods

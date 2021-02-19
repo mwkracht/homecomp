@@ -61,7 +61,10 @@ class HOA(BudgetItem):
         self.hoa_fee = hoa_fee
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        costs = -self.hoa_fee if self.home.owned else 0
+        costs = 0
+
+        if self.home.is_owned(self.period):
+            costs = -self.hoa_fee
 
         return MonthlyExpense(costs=costs)
 
@@ -78,23 +81,27 @@ class Maintenance(BudgetItem):
         self.rate = maintenance_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        costs = -(self.home.value * self.rate) if self.home.owned else 0
+        costs = 0
+
+        if self.home.is_owned(self.period):
+            costs = -(self.home.value * self.rate)
 
         return MonthlyExpense(costs=costs)
 
 
 class PropertyTax(BudgetItem):
     """Property tax assessed once per year against a given home"""
+
     def __init__(self,
                  home: Home,
-                 property_tax_rate: float = const.DEFAULT_PROPERTY_TAX_RATE,
+                 property_tax_rate: float = const.DEFAULT_PROPERTY_TAX_PCT,
                  **kwargs):
         super().__init__(**kwargs)
         self.home = home
         self.rate = property_tax_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.home.owned and self.period % 12 == 11:
+        if self.home.is_owned(self.period) and self.period % 12 == 11:
             return MonthlyExpense(
                 costs=-(self.home.value * self.rate)
             )
@@ -106,16 +113,16 @@ class HomeInsurance(BudgetItem):
 
     def __init__(self,
                  home: Home,
-                 premium: int,
+                 home_insurance_rate: float = const.DEFAULT_HOME_INURANCE_PCT,
                  **kwargs):
         super().__init__(**kwargs)
         self.home = home
-        self.premium = premium
+        self.rate = home_insurance_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.home.owned and self.period % 12 == 11:
+        if self.home.is_owned(self.period) and self.period % 12 == 11:
             return MonthlyExpense(
-                costs=-self.premium
+                costs=-(self.home.value * self.rate)
             )
 
         return MonthlyExpense()

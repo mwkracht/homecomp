@@ -58,12 +58,11 @@ class Home(AssetMixin, BudgetItem):
         self.lifetime = lifetime
         self.down_payment_pct = down_payment_pct
 
-    @property
-    def owned(self):
+    def is_owned(self, period):
         if not self.lifetime:
             return True
 
-        return self.period in self.lifetime
+        return period in self.lifetime
 
     @property
     def buying_period(self):

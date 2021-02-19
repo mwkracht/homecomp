@@ -1,64 +1,58 @@
 from abc import abstractmethod
 from abc import ABC
 from abc import ABCMeta
+from dataclasses import dataclass
+from dataclasses import field
 from typing import List
 
 from homecomp import const
 
 
+@dataclass
 class MonthlyExpense:
     """
     Each BudgetItem will produce a MonthlyExpense which represents the
     total impact of the BudgetItem on the monthly budget.
 
-    MonthlyExpense .
-
     Savings would be an expense to the budget that builds value while cost
     is a budget expense which does not have any impact on value of underlying
     assets.
     """
-
-    def __init__(self,
-                 name: str = '',
-                 savings: int = 0,
-                 costs: int = 0,
-                 components: List = None):
-        """Costs should be provided as negative values - use positive values to represent income"""
-        self.name = name
-        self.savings = savings
-        self.costs = costs
-        self.components = components or []
+    period: int = const.NEVER_PERIOD
+    name: str = ''
+    savings: int = 0
+    costs: int = 0
+    components: List = field(default_factory=list)
 
     @classmethod
     def join(cls, name: str, expenses: List):
         """Join mulitiple expenses under a single name"""
+        periods = set(expense.period for expense in expenses)
+        if len(periods) != 1:
+            raise InputError('Cannot join expenses from different periods')
+
         return MonthlyExpense(
+            period=list(periods)[0],
             name=name,
             savings=sum(expense.savings for expense in expenses),
             costs=sum(expense.costs for expense in expenses),
-            components=[
-                component
-                for expense in expenses
-                for component in expense.components
-            ]
+            components=expenses
         )
 
     @property
     def total(self):
         return self.savings + self.costs
 
-    def __repr__(self):
-        return 'MonthlyExpense(name={}, savings={}, costs={})'.format(
-            self.name, self.savings, self.costs
-        )
 
-
+@dataclass
 class MonthlyBudget:
     """Fixed budget which MonthlyExpenses can be deducted from"""
+    budget : int
+    remaining : int = None
 
-    def __init__(self, budget: int, remaining: int = None):
-        self.budget = budget
-        self.remaining = remaining or budget
+    def __post_init__(self):
+        if self.remaining is None:
+            self.remaining = self.budget
 
     def __sub__(self, other):
         if not isinstance(other, MonthlyExpense):
@@ -72,10 +66,9 @@ class MonthlyBudget:
     def __rsub__(self, other):
         return self.__sub__(other)
 
-    def __repr__(self):
-        return 'MonthlyBudget(budget={}, remaining={})'.format(
-            self.budget, self.remaining
-        )
+    def new(self):
+        """Create new budget instance with full budget remaining"""
+        return self.__class__(budget=self.budget)
 
 
 class BudgetItem(ABC):
@@ -90,8 +83,8 @@ class BudgetItem(ABC):
 
     def step(self, budget: MonthlyBudget) -> MonthlyExpense:
         expense = self._step(budget)
-        if not expense.name:
-            expense.name = self.name
+        expense.name = self.name
+        expense.period = self.period
 
         self.period += 1
         return expense
