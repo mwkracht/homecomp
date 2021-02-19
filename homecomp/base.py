@@ -1,6 +1,9 @@
 from abc import abstractmethod
 from abc import ABC
 from abc import ABCMeta
+from typing import List
+
+from homecomp import const
 
 
 class MonthlyExpense:
@@ -8,36 +11,45 @@ class MonthlyExpense:
     Each BudgetItem will produce a MonthlyExpense which represents the
     total impact of the BudgetItem on the monthly budget.
 
-    MonthlyExpense will allow the total hit to the budget to be categorized.
+    MonthlyExpense .
+
     Savings would be an expense to the budget that builds value while cost
     is a budget expense which does not have any impact on value of underlying
     assets.
     """
 
-    def __init__(self, savings=0, costs=0):
+    def __init__(self,
+                 name: str = '',
+                 savings: int = 0,
+                 costs: int = 0,
+                 components: List = None):
         """Costs should be provided as negative values - use positive values to represent income"""
+        self.name = name
         self.savings = savings
         self.costs = costs
+        self.components = components or []
 
-    def __add__(self, other):
-        if not isinstance(other, MonthlyExpense):
-            raise RuntimeError('Cannot add MonthlyExpense with {}'.format(type(other)))
-
+    @classmethod
+    def join(cls, name: str, expenses: List):
+        """Join mulitiple expenses under a single name"""
         return MonthlyExpense(
-            savings=self.savings + other.savings,
-            costs=self.costs + other.costs
+            name=name,
+            savings=sum(expense.savings for expense in expenses),
+            costs=sum(expense.costs for expense in expenses),
+            components=[
+                component
+                for expense in expenses
+                for component in expense.components
+            ]
         )
-
-    def __radd__(self, other):
-        return self.__add__(other)
 
     @property
     def total(self):
         return self.savings + self.costs
 
     def __repr__(self):
-        return 'MonthlyExpense(savings={}, costs={})'.format(
-            self.savings, self.costs
+        return 'MonthlyExpense(name={}, savings={}, costs={})'.format(
+            self.name, self.savings, self.costs
         )
 
 
@@ -68,8 +80,9 @@ class MonthlyBudget:
 
 class BudgetItem(ABC):
 
-    def __init__(self):
-        self.period = 0
+    def __init__(self, name: str = None, **kwargs):  # pylint: disable=unused-argument
+        self.name = name or self.__class__.__name__
+        self.period = const.INIT_PERIOD
 
     @abstractmethod
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
@@ -77,26 +90,46 @@ class BudgetItem(ABC):
 
     def step(self, budget: MonthlyBudget) -> MonthlyExpense:
         expense = self._step(budget)
+        if not expense.name:
+            expense.name = self.name
 
         self.period += 1
         return expense
 
 
-class NetworthBudgetItem(BudgetItem, metaclass=ABCMeta):
-    """Tracks underlying value while also generating monthly expenses"""
+class BudgetLineItem(BudgetItem):
+    """BudgetItem composite class"""
 
-    def __init__(self, value=0):
-        super().__init__()
+    def __init__(self, budget_items: List[BudgetItem] = None, **kwargs):
+        super().__init__(**kwargs)
+        self.budget_items = budget_items or []
+
+    def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
+        expenses = []
+
+        for budget_item in self.budget_items:
+            expenses.append(budget_item.step(budget))
+            budget -= expenses[-1]
+
+        return MonthlyExpense.join(self.name, expenses)
+
+
+class NetworthMixin(metaclass=ABCMeta):
+    """Tracks underlying value over time"""
+
+    def __init__(self, value=0, **kwargs):
+        super().__init__(**kwargs)
+
         # track underlying value of asset for each period where each key represents the value
         # of the object at the beginning of that period
-        self.values = {0: value}
+        self.values = {const.INIT_PERIOD: value}
 
     @property
     def value(self):
         """Read value of asset from most recently set period"""
         return next(
             self.values[i]
-            for i in reversed(range(0, self.period + 2))
+            for i in reversed(range(const.INIT_PERIOD, self.period + 2))
             if i in self.values
         )
 
@@ -110,9 +143,9 @@ class NetworthBudgetItem(BudgetItem, metaclass=ABCMeta):
         return self.values.get(period, self.value)
 
 
-class Asset(NetworthBudgetItem, metaclass=ABCMeta):
-    """Positive value NetworthBudgetItem"""
+class AssetMixin(NetworthMixin, metaclass=ABCMeta):
+    """Positive value categorization of NetworthMixin"""
 
 
-class Liability(NetworthBudgetItem, metaclass=ABCMeta):
-    """Negative value NetworthBudgetItem"""
+class LiabilityMixin(NetworthMixin, metaclass=ABCMeta):
+    """Negative value categorization NetworthMixin"""

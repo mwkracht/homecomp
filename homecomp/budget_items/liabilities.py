@@ -1,27 +1,32 @@
-from homecomp.base import Liability
+from homecomp.base import BudgetItem
+from homecomp.base import LiabilityMixin
 from homecomp.base import MonthlyBudget
 from homecomp.base import MonthlyExpense
 from homecomp import const
 
 
-def calculate_min_payment(principal, rate, periods):
-    x = (1 + rate) ** periods
+def calculate_min_payment(principal, rate, length):
+    x = (1 + rate) ** length
     return round(principal * (rate * x) / (x - 1), 2)
 
 
-class Mortgage(Liability):
+class Mortgage(LiabilityMixin, BudgetItem):
     """
     Equated Monthly Installment (EMI) Mortgage
     """
 
     def __init__(self,
-                 principal,
-                 payment,
-                 rate=const.DEFAULT_MORTGAGE_RATE):
-        super().__init__(value=-principal)
-        self.principal = principal
+                 price: int,
+                 payment: int = 0,
+                 down_payment_pct: float = const.DEFAULT_DOWN_PAYMENT_PCT,
+                 rate: float = const.DEFAULT_MORTGAGE_RATE,
+                 start: int = const.INIT_PERIOD,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.principal = price * (1 - down_payment_pct)
         self.rate = rate
         self.payment = payment
+        self.start = start
 
     @property
     def total_paid(self):
@@ -37,6 +42,8 @@ class Mortgage(Liability):
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Calculate cost for current period"""
+        if self.start == self.period:
+            self.value = -self.principal
         if self.value >= 0:
             return MonthlyExpense()
 
@@ -58,14 +65,10 @@ class MinimumPaymentMortgage(Mortgage):
     """
 
     def __init__(self,
-                 principal,
-                 rate=const.DEFAULT_MORTGAGE_RATE,
-                 periods=const.DEFAULT_MORTGAGE_PERIODS):
-        super().__init__(
-            principal=principal,
-            rate=rate,
-            payment=calculate_min_payment(principal, rate, periods)
-        )
+                 length: int = const.DEFAULT_MORTGAGE_PERIODS,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.payment = calculate_min_payment(self.principal, self.rate, length)
 
 
 class VariablePaymentMortgage(MinimumPaymentMortgage):
@@ -75,6 +78,10 @@ class VariablePaymentMortgage(MinimumPaymentMortgage):
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Calculate cost for current period"""
+        if self.start - 1 == self.period:
+            self.value = -self.principal  # set value but do not accrue interest
+            return MonthlyExpense()
+
         if self.value >= 0:
             return MonthlyExpense()
 

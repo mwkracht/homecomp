@@ -11,16 +11,17 @@ class HomeBuyingCosts(BudgetItem):
     """
 
     def __init__(self,
-                 home: Home = None,
-                 rate: float = const.DEFAULT_HOME_BUYING_COSTS_PCT):
-        super().__init__()
-        self.rate = rate
+                 home: Home,
+                 buying_costs_rate: float = const.DEFAULT_HOME_BUYING_COSTS_PCT,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.home = home
+        self.rate = buying_costs_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.period == 0:
+        if self.period == self.home.buying_period:
             return MonthlyExpense(
-                costs=-(self.home.value * self.rate)
+                costs=-(self.home.price * self.rate)
             )
 
         return MonthlyExpense()
@@ -33,15 +34,14 @@ class HomeSellingCosts(BudgetItem):
 
     def __init__(self,
                  home: Home,
-                 sell_period: int,
-                 rate: float = const.DEFAULT_HOME_SELLING_COSTS_PCT):
-        super().__init__()
-        self.rate = rate
+                 selling_costs_rate: float = const.DEFAULT_HOME_SELLING_COSTS_PCT,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.home = home
-        self.sell_period = sell_period
+        self.rate = selling_costs_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.period == self.sell_period:
+        if self.home.selling_period == self.period:
             return MonthlyExpense(
                 costs=-(self.home.value * self.rate)
             )
@@ -52,12 +52,18 @@ class HomeSellingCosts(BudgetItem):
 class HOA(BudgetItem):
     """Monthly HOA fee"""
 
-    def __init__(self, fee: int):
-        super().__init__()
-        self.fee = fee
+    def __init__(self,
+                 home: Home,
+                 hoa_fee: int,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.home = home
+        self.hoa_fee = hoa_fee
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        return MonthlyExpense(costs=-self.fee)
+        costs = -self.hoa_fee if self.home.owned else 0
+
+        return MonthlyExpense(costs=costs)
 
 
 class Maintenance(BudgetItem):
@@ -65,28 +71,30 @@ class Maintenance(BudgetItem):
 
     def __init__(self,
                  home: Home = None,
-                 rate: float = const.DEFAULT_HOME_MAINTENANCE_RATE):
-        super().__init__()
-        self.rate = rate
+                 maintenance_rate: float = const.DEFAULT_HOME_MAINTENANCE_RATE,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.home = home
+        self.rate = maintenance_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        return MonthlyExpense(
-            costs=-(self.home.value * self.rate)
-        )
+        costs = -(self.home.value * self.rate) if self.home.owned else 0
+
+        return MonthlyExpense(costs=costs)
 
 
 class PropertyTax(BudgetItem):
     """Property tax assessed once per year against a given home"""
     def __init__(self,
-                 home: Home = None,
-                 rate: float = const.DEFAULT_PROPERTY_TAX_RATE):
-        super().__init__()
-        self.rate = rate
+                 home: Home,
+                 property_tax_rate: float = const.DEFAULT_PROPERTY_TAX_RATE,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.home = home
+        self.rate = property_tax_rate
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.period % 12 == 11:
+        if self.home.owned and self.period % 12 == 11:
             return MonthlyExpense(
                 costs=-(self.home.value * self.rate)
             )
@@ -96,12 +104,16 @@ class PropertyTax(BudgetItem):
 
 class HomeInsurance(BudgetItem):
 
-    def __init__(self, premium: int):
-        super().__init__()
+    def __init__(self,
+                 home: Home,
+                 premium: int,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.home = home
         self.premium = premium
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.period % 12 == 11:
+        if self.home.owned and self.period % 12 == 11:
             return MonthlyExpense(
                 costs=-self.premium
             )
@@ -111,9 +123,12 @@ class HomeInsurance(BudgetItem):
 
 class Rent(BudgetItem):
 
-    def __init__(self, rent: int, rate: float = const.DEFAULT_RENT_INCREASE_PCT):
-        super().__init__()
-        self.rate = rate
+    def __init__(self,
+                 rent: int,
+                 rent_increase_rate: float = const.DEFAULT_RENT_INCREASE_PCT,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.rate = rent_increase_rate
         self.rent = rent
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:

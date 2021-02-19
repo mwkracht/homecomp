@@ -1,5 +1,4 @@
 # pylint: disable=too-many-arguments,redefined-outer-name,function-redefined
-from collections import OrderedDict
 import csv
 from datetime import date
 
@@ -8,17 +7,12 @@ from dateutil.relativedelta import relativedelta
 
 from homecomp import const
 from homecomp.base import MonthlyBudget
-from homecomp.base import NetworthBudgetItem
-from homecomp.budget_items.assets import Home
+from homecomp.base import NetworthMixin
 from homecomp.budget_items.assets import Investment
+from homecomp.budget_items.composite import HomeLifetime
 from homecomp.budget_items.liabilities import VariablePaymentMortgage
-from homecomp.budget_items.misc import HomeBuyingCosts
-from homecomp.budget_items.misc import HomeInsurance
-from homecomp.budget_items.misc import HomeSellingCosts
-from homecomp.budget_items.misc import Maintenance
-from homecomp.budget_items.misc import PropertyTax
 from homecomp.budget_items.misc import Rent
-from homecomp.simulator import run
+from homecomp.compute import compute
 
 
 def format_value(value):
@@ -36,9 +30,9 @@ def iter_months(start=None):
 def write_networth_csv(output, budget_items, periods):
     with open(output, mode='w') as output_fd:
         networth_items = {
-            key: value
-            for key, value in budget_items.items()
-            if isinstance(value, NetworthBudgetItem)
+            budget_item.name: budget_item
+            for budget_item in budget_items
+            if isinstance(budget_item, NetworthMixin)
         }
 
         months = iter_months()
@@ -48,7 +42,7 @@ def write_networth_csv(output, budget_items, periods):
         )
         writer.writeheader()
 
-        for period in range(periods + 1):
+        for period in range(const.INIT_PERIOD, periods + 1):
             row = {'Time': next(months)}
             row.update({
                 key: format_value(networth_item.get_period_value(period))
@@ -70,41 +64,37 @@ def buy():
 @buy.command()
 @click.argument('cash', type=click.INT)
 @click.argument('budget', type=click.INT)
-@click.argument('list_price', type=click.INT)
+@click.argument('price', type=click.INT)
+@click.option('--hoa', '-h', type=click.INT, default=0, help='Monthly HOA fee')
 @click.option('--premium', '-p', type=click.INT, default=1200, help='Home insurance annual premium')
 @click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run simulation')
 @click.option('--output', '-o', default='buy_simple.csv', help='Output csv file')
-def simple(cash, budget, list_price, premium, time, output):
+def simple(cash, budget, price, hoa, premium, time, output):
     """
     Simple buy simulation with a fixed monthly housing budget.
 
     Home will be sold during the last period of the simulation.
     """
-    down_payment = list_price * const.DEFAULT_DOWN_PAYMENT_PCT
     periods = time * const.PERIODS_PER_YEAR
 
-    cash -= down_payment
-    if cash < 0:
-        raise click.UsageError('Required down payment is larger than available cash')
-
-    home = Home(list_price)
-
-    budget_items = OrderedDict({
-        'home': home,
-        'buying_costs': HomeBuyingCosts(home=home),
-        'selling_costs': HomeSellingCosts(home=home, sell_period=periods-1),
-        'maintenance': Maintenance(home=home),
-        'property_tax': PropertyTax(home=home),
-        'insurance': HomeInsurance(premium=premium),
-        'mortgage': VariablePaymentMortgage(
-            principal=list_price - down_payment,
+    budget_items = [
+        HomeLifetime(
+            name='SimpleHome',
+            lifetime=list(range(periods)),
+            price=price,
+            hoa_fee=hoa,
+            premium=premium,
         ),
-        'cash': Investment(cash),
-    })
+        VariablePaymentMortgage(
+            price=price,
+            start=0,
+        ),
+        Investment(cash),
+    ]
 
     budget = MonthlyBudget(budget)
 
-    run(
+    compute(
         budget,
         budget_items,
         periods=periods
@@ -130,14 +120,14 @@ def simple(cash, budget, rent, time, output):
     """
     periods = time * const.PERIODS_PER_YEAR
 
-    budget_items = OrderedDict({
-        'rent': Rent(rent),
-        'cash': Investment(cash),
-    })
+    budget_items = [
+        Rent(rent),
+        Investment(cash),
+    ]
 
     budget = MonthlyBudget(budget)
 
-    run(
+    compute(
         budget,
         budget_items,
         periods=periods
