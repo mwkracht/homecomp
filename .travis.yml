@@ -2,11 +2,11 @@ language: python
 
 matrix:
   include:
-    - name: "Python 3.6 Unit Tests"
-      python: 3.6
+    - name: "Python 3.7 Unit Tests"
+      python: 3.7
       env: TOXENV=py36
     - name: "Linter"
-      python: 2.7
+      python: 3.7
       env: TOXENV=lint
 
 install:
