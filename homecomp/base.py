@@ -29,7 +29,7 @@ class MonthlyExpense:
         """Join mulitiple expenses under a single name"""
         periods = set(expense.period for expense in expenses)
         if len(periods) != 1:
-            raise InputError('Cannot join expenses from different periods')
+            raise ValueError('Cannot join expenses from different periods')
 
         return MonthlyExpense(
             period=list(periods)[0],

@@ -20,7 +20,6 @@ class HomeLifetime(AssetMixin, BudgetLineItem):
     def __init__(self,
                  name: str,
                  lifetime: List[int],
-                 premium: int,
                  **kwargs):
 
         home = Home(lifetime=lifetime, **kwargs)
@@ -33,7 +32,7 @@ class HomeLifetime(AssetMixin, BudgetLineItem):
                 HomeSellingCosts(home=home, **kwargs),
                 Maintenance(home=home,  **kwargs),
                 PropertyTax(home=home,  **kwargs),
-                HomeInsurance(home=home, premium=premium, **kwargs),
+                HomeInsurance(home=home, **kwargs),
             ]
         )
 
