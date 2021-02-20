@@ -4,7 +4,7 @@ matrix:
   include:
     - name: "Python 3.7 Unit Tests"
       python: 3.7
-      env: TOXENV=py36
+      env: TOXENV=py37
     - name: "Linter"
       python: 3.7
       env: TOXENV=lint
