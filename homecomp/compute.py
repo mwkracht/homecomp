@@ -1,8 +1,8 @@
 from typing import Dict
 
-from homecomp.base import BudgetItem
-from homecomp.base import MonthlyBudget
-from homecomp.base import MonthlyExpense
+from homecomp.models import BudgetItem
+from homecomp.models import MonthlyBudget
+from homecomp.models import MonthlyExpense
 
 
 def compute(budget: MonthlyBudget,

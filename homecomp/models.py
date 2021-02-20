@@ -1,11 +1,33 @@
+# pylint: disable=too-many-instance-attributes
 from abc import abstractmethod
 from abc import ABC
 from abc import ABCMeta
 from dataclasses import dataclass
 from dataclasses import field
+from enum import Enum
 from typing import List
 
 from homecomp import const
+
+
+class HousingType(Enum):
+    home = 1
+    rental = 2
+
+
+@dataclass
+class HousingDetails:
+    name: str
+    price: int
+    type: HousingType
+    link: str = None
+    image: str = None
+    hoa: int = 0
+    property_tax_rate: float = const.DEFAULT_PROPERTY_TAX_PCT
+    bedrooms: int = None
+    bathrooms: int = None
+    home_size: int = None
+    lot_size: int = None
 
 
 @dataclass

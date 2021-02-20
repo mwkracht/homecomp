@@ -3,7 +3,8 @@ import json
 import bs4
 import requests
 
-from homecomp.clients.base import HomeDetails
+from homecomp.models import HousingDetails
+from homecomp.models import HousingType
 
 
 HEADERS = {
@@ -17,7 +18,7 @@ HEADERS = {
 }
 
 
-def get_home_details(shareable_link: str) -> HomeDetails:
+def get_home_details(shareable_link: str) -> HousingDetails:
     """
     Return all home details which can be used for computation values.
 
@@ -28,7 +29,7 @@ def get_home_details(shareable_link: str) -> HomeDetails:
 
     soup = bs4.BeautifulSoup(resp.text, 'html.parser')
 
-    name = soup.find('title').get_text(strip=True)
+    name = soup.find('title').get_text(strip=True).split('|')[0].strip()
 
     # price = next(soup.find('div', {'class': 'ds-summary-row'}).children).get_text(strip=True)
     # price = int(price.strip('$').replace(',', ''))
@@ -41,12 +42,18 @@ def get_home_details(shareable_link: str) -> HomeDetails:
     data = json.loads(next(soup.find(id='hdpApolloPreloadedData').children))
     cache = json.loads(data['apiCache'])
     full_data_key = next(key for key in cache if 'FullRenderQuery' in key)
-    full_data = cache[full_data_key]
+    home = cache[full_data_key]['property']
 
-    return HomeDetails(
+    return HousingDetails(
         name=name,
+        type=HousingType.home,
         link=shareable_link,
-        price=full_data['property']['price'],
-        hoa=full_data['property']['monthlyHoaFee'],
-        property_tax_rate=full_data['property']['propertyTaxRate'] / 100
+        image=home['mediumImageLink'],
+        price=home['price'],
+        hoa=home['monthlyHoaFee'],
+        property_tax_rate=home['propertyTaxRate'] / 100,
+        bedrooms=home['bedrooms'],
+        bathrooms=home['bathrooms'],
+        home_size=home['livingArea'],
+        lot_size=home['lotSize'],
     )

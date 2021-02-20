@@ -1,7 +1,7 @@
-from homecomp.base import BudgetItem
-from homecomp.base import LiabilityMixin
-from homecomp.base import MonthlyBudget
-from homecomp.base import MonthlyExpense
+from homecomp.models import BudgetItem
+from homecomp.models import LiabilityMixin
+from homecomp.models import MonthlyBudget
+from homecomp.models import MonthlyExpense
 from homecomp import const
 
 
@@ -59,19 +59,23 @@ class Mortgage(LiabilityMixin, BudgetItem):
         )
 
 
-class MinimumPaymentMortgage(Mortgage):
+class MinMortgage(Mortgage):
     """
     Make the same minimum payment every month.
     """
 
     def __init__(self,
-                 length: int = const.DEFAULT_MORTGAGE_PERIODS,
+                 mortgage_years: int = const.DEFAULT_MORTGAGE_YEARS,
                  **kwargs):
         super().__init__(**kwargs)
-        self.payment = calculate_min_payment(self.principal, self.rate, length)
+        self.payment = calculate_min_payment(
+            self.principal,
+            self.rate,
+            const.PERIODS_PER_YEAR * mortgage_years
+        )
 
 
-class VariablePaymentMortgage(MinimumPaymentMortgage):
+class MaxMortgage(MinMortgage):
     """
     All excess budget goes towards paying down the principal.
     """

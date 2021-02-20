@@ -1,9 +1,9 @@
 from typing import List
 
-from homecomp.base import AssetMixin
-from homecomp.base import BudgetLineItem
-from homecomp.base import MonthlyBudget
-from homecomp.base import MonthlyExpense
+from homecomp.models import AssetMixin
+from homecomp.models import BudgetLineItem
+from homecomp.models import MonthlyBudget
+from homecomp.models import MonthlyExpense
 from homecomp.budget_items.assets import Home
 from homecomp.budget_items.misc import HomeBuyingCosts
 from homecomp.budget_items.misc import HomeInsurance

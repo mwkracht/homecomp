@@ -2,3 +2,4 @@ click
 python-dateutil
 requests
 beautifulsoup4
+jinja2
