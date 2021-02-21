@@ -28,6 +28,8 @@ def get_home_details(shareable_link: str) -> HousingDetails:
     resp.raise_for_status()
 
     soup = bs4.BeautifulSoup(resp.text, 'html.parser')
+    if soup.find('h5', text="Please verify you're a human to continue."):
+        raise ValueError('Captcha raised when performing zillow request')
 
     name = soup.find('title').get_text(strip=True).split('|')[0].strip()
 
