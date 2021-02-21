@@ -77,7 +77,7 @@ def write_html(details: HousingDetails,
                budget_items: List[BudgetItem],
                expenses: List[MonthlyExpense]):
     """Write all computation results to html output file"""
-    asset_headers, asset_rows = common.get_asset_table(budget_items, len(expenses))
+    asset_headers, asset_rows = common.get_asset_table(budget_items, len(expenses) - 1)
 
     with open(f'{details.name}.html', 'w') as output_fd:
         output_fd.write(TEMPLATE.render(

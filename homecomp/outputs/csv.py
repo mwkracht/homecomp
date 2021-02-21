@@ -27,5 +27,5 @@ def write_csv(details: HousingDetails,
               budget_items: List[BudgetItem],
               expenses: List[MonthlyExpense]):
     """Write all computation results to csv output files"""
-    write_assets_csv(details.name, budget_items, len(expenses))
+    write_assets_csv(details.name, budget_items, len(expenses) - 1)
     write_expenses_csv(details.name, expenses)

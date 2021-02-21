@@ -54,7 +54,7 @@ def simple(cash, budget, price, hoa, time, output, format, max_mortgage):
         ),
         mortgage_cls(
             price=details.price,
-            start=0,
+            start=const.INIT_PERIOD,
         ),
         Investment(cash),
     ]
@@ -64,7 +64,7 @@ def simple(cash, budget, price, hoa, time, output, format, max_mortgage):
     expenses = compute(
         budget,
         budget_items,
-        periods=periods
+        periods=periods + 1
     )
 
     outputs.write(format, details, budget_items, expenses)
@@ -94,7 +94,7 @@ def zillow(cash, budget, link, time, format, max_mortgage):
         ),
         mortgage_cls(
             price=details.price,
-            start=0,
+            start=const.INIT_PERIOD,
         ),
         Investment(cash),
     ]
@@ -104,7 +104,7 @@ def zillow(cash, budget, link, time, format, max_mortgage):
     expenses = compute(
         budget,
         budget_items,
-        periods=periods
+        periods=periods + 1
     )
 
     outputs.write(format, details, budget_items, expenses)
@@ -143,7 +143,7 @@ def simple(cash, budget, rent, time, output, format):
     expenses = compute(
         budget,
         budget_items,
-        periods=periods
+        periods=periods + 1
     )
 
     outputs.write(format, details, budget_items, expenses)

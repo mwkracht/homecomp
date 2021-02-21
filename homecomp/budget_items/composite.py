@@ -27,12 +27,12 @@ class HomeLifetime(AssetMixin, BudgetLineItem):
         super().__init__(
             name=name,
             budget_items=[
-                home,
                 HomeBuyingCosts(home=home, **kwargs),
                 HomeSellingCosts(home=home, **kwargs),
                 Maintenance(home=home,  **kwargs),
                 PropertyTax(home=home,  **kwargs),
                 HomeInsurance(home=home, **kwargs),
+                home,
             ]
         )
 
@@ -40,6 +40,6 @@ class HomeLifetime(AssetMixin, BudgetLineItem):
         expense = super()._step(budget)
 
         # track composite asset value to the underlying home value
-        self.value = self.budget_items[0].value
+        self.value = self.budget_items[-1].value
 
         return expense
