@@ -43,7 +43,7 @@ TEMPLATE = Template("""
     </div>
 
     <div class="text-center py-3 px-3">
-        <h3 class="py-1">Assets over Lifetime</h3>
+        <h3 class="py-2">Assets</h3>
         <table class="table table-striped table-bordered">
             <thead class="thead-light">
                 <tr>
@@ -57,9 +57,37 @@ TEMPLATE = Template("""
                 <tr>
                 {% for header in asset_headers %}
                     {% if loop.index0 == 0 %}
-                        <th scope="row">{{ row[header] }}</th>
+                        <th scope="row" style="white-space:nowrap">{{ row[header] }}</th>
                     {% else %}
-                        <td>{{ row[header] }}</td>
+                        <td style="white-space:nowrap">{{ row[header] }}</td>
+                    {% endif %}
+                {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-center py-3 px-3 table-responsive">
+        <h3 class="py-2">Expenses</h3>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                {% for header_row in expense_header_spans %}
+                    <tr>
+                    {% for header, span in header_row %}
+                        <th colspan="{{span}}" scope="col">{{ header }}</th>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+            </thead>
+            <tbody>
+            {% for row in expense_rows %}
+                <tr>
+                {% for header in expense_headers %}
+                    {% if loop.index0 == 0 %}
+                        <th scope="row" style="white-space:nowrap">{{ row[header] }}</th>
+                    {% else %}
+                        <td style="white-space:nowrap">{{ row[header] }}</td>
                     {% endif %}
                 {% endfor %}
                 </tr>
@@ -78,10 +106,14 @@ def write_html(details: HousingDetails,
                expenses: List[MonthlyExpense]):
     """Write all computation results to html output file"""
     asset_headers, asset_rows = common.get_asset_table(budget_items, len(expenses) - 1)
+    expense_headers, expense_rows = common.get_expense_table(expenses)
 
     with open(f'{details.name}.html', 'w') as output_fd:
         output_fd.write(TEMPLATE.render(
             details=details,
             asset_headers=asset_headers,
             asset_rows=asset_rows,
+            expense_header_spans=common.get_header_spans(expense_headers),
+            expense_headers=expense_headers,
+            expense_rows=expense_rows,
         ))

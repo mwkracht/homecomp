@@ -11,8 +11,8 @@ from homecomp import const
 
 
 class HousingType(Enum):
-    home = 1
-    rental = 2
+    home = 1  # pylint: disable=invalid-name
+    rental = 2  # pylint: disable=invalid-name
 
 
 @dataclass
@@ -141,7 +141,13 @@ class NetworthMixin(metaclass=ABCMeta):
 
     @property
     def value(self):
-        """Read value of asset from most recently set period"""
+        """
+        Read value of asset from most recently set period.
+
+        This means the first value read will be from the current period. Once
+        a value is written then the next read from self.value will return the
+        value from the next period (not the current period)
+        """
         return next(
             self.values[i]
             for i in reversed(range(const.INIT_PERIOD, self.period + 2))

@@ -54,7 +54,7 @@ def simple(cash, budget, price, hoa, time, output, format, max_mortgage):
         ),
         mortgage_cls(
             price=details.price,
-            start=const.INIT_PERIOD,
+            start=0,
         ),
         Investment(cash),
     ]
@@ -94,7 +94,7 @@ def zillow(cash, budget, link, time, format, max_mortgage):
         ),
         mortgage_cls(
             price=details.price,
-            start=const.INIT_PERIOD,
+            start=0,
         ),
         Investment(cash),
     ]

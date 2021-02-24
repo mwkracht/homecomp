@@ -42,8 +42,9 @@ class Mortgage(LiabilityMixin, BudgetItem):
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Calculate cost for current period"""
-        if self.start == self.period:  # start of mortgage
+        if self.period == self.start - 1:  # start of mortgage
             self.value = -self.principal
+            return MonthlyExpense()
 
         if budget.remaining > abs(self.value):  # assume sell of house/end of mortgage
             payment = self.value

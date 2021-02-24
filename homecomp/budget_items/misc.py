@@ -5,50 +5,6 @@ from homecomp.models import MonthlyExpense
 from homecomp.budget_items.assets import Home
 
 
-class HomeBuyingCosts(BudgetItem):
-    """
-    Upfront one time costs associated with buying a home
-    """
-
-    def __init__(self,
-                 home: Home,
-                 buying_costs_rate: float = const.DEFAULT_HOME_BUYING_COSTS_PCT,
-                 **kwargs):
-        super().__init__(**kwargs)
-        self.home = home
-        self.rate = buying_costs_rate
-
-    def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.period == self.home.buying_period:
-            return MonthlyExpense(
-                costs=-(self.home.price * self.rate)
-            )
-
-        return MonthlyExpense()
-
-
-class HomeSellingCosts(BudgetItem):
-    """
-    One time costs associated with selling a home
-    """
-
-    def __init__(self,
-                 home: Home,
-                 selling_costs_rate: float = const.DEFAULT_HOME_SELLING_COSTS_PCT,
-                 **kwargs):
-        super().__init__(**kwargs)
-        self.home = home
-        self.rate = selling_costs_rate
-
-    def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
-        if self.home.selling_period == self.period:
-            return MonthlyExpense(
-                costs=-(self.home.value * self.rate)
-            )
-
-        return MonthlyExpense()
-
-
 class HOA(BudgetItem):
     """Monthly HOA fee"""
 

@@ -48,6 +48,8 @@ class Home(AssetMixin, BudgetItem):
                  lifetime: List[int] = None,
                  down_payment_pct: float = const.DEFAULT_DOWN_PAYMENT_PCT,
                  appreciation: float = const.DEFAULT_HOME_APPRECIATION_RATE,
+                 buying_costs_rate: float = const.DEFAULT_HOME_BUYING_COSTS_PCT,
+                 selling_costs_rate: float = const.DEFAULT_HOME_SELLING_COSTS_PCT,
                  **kwargs):
         lifetime = lifetime or []
         initial_value = price if const.INIT_PERIOD in lifetime else 0
@@ -57,6 +59,8 @@ class Home(AssetMixin, BudgetItem):
         self.rate = appreciation
         self.lifetime = lifetime
         self.down_payment_pct = down_payment_pct
+        self.buying_costs_rate = buying_costs_rate
+        self.selling_costs_rate = selling_costs_rate
 
     def is_owned(self, period):
         if not self.lifetime:
@@ -77,18 +81,31 @@ class Home(AssetMixin, BudgetItem):
             return const.NEVER_PERIOD
 
         return self.lifetime[-1]
-    
+
+    def _purchasing_step(self, budget: MonthlyBudget) -> MonthlyExpense:
+        """Set asset value and remove down payment and buying costs from cash flow"""
+        self.value = self.price
+
+        buying_costs = self.price * self.buying_costs_rate
+        down_payment = self.price * self.down_payment_pct
+
+        return MonthlyExpense(costs=-(buying_costs + down_payment))
+
+    def _selling_step(self, budget: MonthlyBudget) -> MonthlyExpense:
+        """Clear asset value and add liquid asset value to budget minus selling costs"""        
+        sell_price = self.value
+        selling_costs = sell_price * self.selling_costs_rate
+
+        self.value = 0
+
+        return MonthlyExpense(savings=sell_price - selling_costs)
+
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Calculate cost for current period"""
         if self.period == self.buying_period:
-            # set asset value and remove down payment from cash flow
-            self.value = self.price
-            return MonthlyExpense(costs=-(self.price * self.down_payment_pct))
-
+            return self._purchasing_step(budget)
         elif self.period == self.selling_period:
-            sell_price = self.value
-            self.value = 0
-            return MonthlyExpense(savings=sell_price)
+            return self._selling_step(budget)
 
         self.value = round(self.value * (1 + self.rate), 2)
         return MonthlyExpense()
