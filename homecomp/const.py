@@ -24,7 +24,9 @@ DEFAULT_HOME_MAINTENANCE_RATE = yearly_to_period_rate(DEFAULT_HOME_MAINTENANCE_P
 
 DEFAULT_HOME_INURANCE_PCT = 0.0050
 
-DEFAULT_PROPERTY_TAX_PCT = 0.0125
+# the effect property tax rate is most likely lower than nominal rate due
+# to tax assessment of property value differing from home list/sale price
+DEFAULT_PROPERTY_TAX_PCT = 0.0075
 
 DEFAULT_RENT_INCREASE_PCT = 0.025
 

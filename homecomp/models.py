@@ -16,7 +16,7 @@ class HousingType(Enum):
 
 
 @dataclass
-class HousingDetails:
+class HousingDetail:
     name: str
     price: int
     type: HousingType
@@ -28,6 +28,13 @@ class HousingDetails:
     bathrooms: int = None
     home_size: int = None
     lot_size: int = None
+
+
+@dataclass
+class PurchaserProfile:
+    name: str
+    cash: int
+    budget: int
 
 
 @dataclass

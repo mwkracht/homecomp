@@ -3,7 +3,7 @@ from typing import List
 from jinja2 import Template
 
 from homecomp.models import BudgetItem
-from homecomp.models import HousingDetails
+from homecomp.models import HousingDetail
 from homecomp.models import MonthlyExpense
 from homecomp.outputs import common
 
@@ -101,7 +101,7 @@ TEMPLATE = Template("""
 """)
 
 
-def write_html(details: HousingDetails,
+def write_html(details: HousingDetail,
                budget_items: List[BudgetItem],
                expenses: List[MonthlyExpense]):
     """Write all computation results to html output file"""

@@ -3,7 +3,7 @@ import json
 import bs4
 import requests
 
-from homecomp.models import HousingDetails
+from homecomp.models import HousingDetail
 from homecomp.models import HousingType
 
 
@@ -18,7 +18,7 @@ HEADERS = {
 }
 
 
-def get_home_details(shareable_link: str) -> HousingDetails:
+def get_home_details(shareable_link: str) -> HousingDetail:
     """
     Return all home details which can be used for computation values.
 
@@ -46,7 +46,7 @@ def get_home_details(shareable_link: str) -> HousingDetails:
     full_data_key = next(key for key in cache if 'FullRenderQuery' in key)
     home = cache[full_data_key]['property']
 
-    return HousingDetails(
+    return HousingDetail(
         name=name,
         type=HousingType.home,
         link=shareable_link,

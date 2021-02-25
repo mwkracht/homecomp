@@ -1,7 +1,7 @@
 from typing import List
 
 from homecomp.models import BudgetItem
-from homecomp.models import HousingDetails
+from homecomp.models import HousingDetail
 from homecomp.models import MonthlyExpense
 from homecomp.outputs.csv import write_csv
 from homecomp.outputs.html import write_html
@@ -16,7 +16,7 @@ DEFAULT_FORMAT = FORMATS[0]
 
 
 def write(choice: str,
-          details: HousingDetails,
+          details: HousingDetail,
           budget_items: List[BudgetItem],
           expenses: List[MonthlyExpense]):
     if choice not in FORMATS:

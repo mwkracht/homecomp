@@ -2,7 +2,7 @@ import csv
 from typing import List
 
 from homecomp.models import BudgetItem
-from homecomp.models import HousingDetails
+from homecomp.models import HousingDetail
 from homecomp.models import MonthlyExpense
 from homecomp.outputs import common
 
@@ -23,7 +23,7 @@ def write_assets_csv(filename: str, budget_items: List[BudgetItem], periods: int
             writer.writerow(row)
 
 
-def write_csv(details: HousingDetails,
+def write_csv(details: HousingDetail,
               budget_items: List[BudgetItem],
               expenses: List[MonthlyExpense]):
     """Write all computation results to csv output files"""
