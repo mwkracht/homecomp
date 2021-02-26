@@ -1,4 +1,6 @@
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,redefined-outer-name,redefined-builtin
+import os
+
 import click
 
 from homecomp import clients
@@ -7,7 +9,6 @@ from homecomp import errors
 from homecomp import outputs
 from homecomp.models import PurchaserProfile
 from homecomp.models import HousingDetail
-from homecomp.models import HousingType
 from homecomp.models import MonthlyBudget
 from homecomp.budget_items.assets import Investment
 from homecomp.budget_items.composite import HomeLifetime
@@ -18,12 +19,21 @@ from homecomp.compute import compute
 from homecomp.storage import DataclassFileStorage
 
 
-def get_purchaser_profile(purchaser):
+def get_purchaser_profile(name: str) -> PurchaserProfile:
     try:
         with DataclassFileStorage() as storage:
-            return storage.profiles.find(purchaser)
+            return storage.profiles.find(name)
     except errors.NoEntryFound as error:
-        raise click.ClickException(f'No profile found for {purchaser}') from error
+        raise click.ClickException(f'No profile found for {name}') from error
+
+
+def get_housing_detail(name: str) -> HousingDetail:
+    try:
+        with DataclassFileStorage() as storage:
+            return storage.housing.find(name)
+    except errors.NoEntryFound as error:
+        raise click.ClickException(f'No housing found for {name}') from error
+
 
 
 @click.group()
@@ -82,33 +92,79 @@ def profiles_remove(name):
 
 
 @click.group()
-def buy():
-    """Subset of calculations available for buying housing"""
+def housing():
+    """Commands for manipulating housing details"""
 
 
-@buy.command(name='simple')
+@housing.command(name='add')
+@click.option('--link', '-l', help='Shareable link to housing')
+def housing_add(link):
+    if link:
+        _housing = clients.get_home_details(link)
+    else:
+        raise click.UsageError('Must provide link or name, price, type inputs')
+
+    with DataclassFileStorage() as storage:
+        storage.housing.save(_housing, overwrite=False)
+
+
+@housing.command(name='update')
+@click.argument('name')
+def housing_update(name):
+    try:
+        with DataclassFileStorage() as storage:
+            _housing = storage.housing.find(name)
+
+            # remove old housing option in case name has changed
+            storage.housing.delete(_housing.name)
+
+            if _housing.link:
+                _housing = clients.get_home_details(_housing.link)
+            else:
+                raise click.ClickException('Can only update housing with link')
+
+            storage.housing.save(_housing)
+
+    except errors.NoEntryFound:
+        click.echo(f'No housing found for {name}')
+
+
+@housing.command(name='list')
+@click.argument('name', nargs=-1)
+def housing_list(name):
+    with DataclassFileStorage() as storage:
+        _housings = storage.housing.find_all(name[0]) if name else storage.housing
+
+        for _housing in _housings:
+            click.echo(_housing)
+
+
+@housing.command(name='remove')
+@click.argument('name')
+def housing_remove(name):
+    try:
+        with DataclassFileStorage() as storage:
+            storage.housing.delete(name)
+    except errors.NoEntryFound:
+        click.echo(f'No housing found for {name}')
+
+
+@click.command()
 @click.argument('purchaser')
-@click.argument('price', type=click.INT)
-@click.option('--hoa', '-h', type=click.INT, default=0, help='Monthly HOA fee')
+@click.argument('housing')
 @click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
-@click.option('--output', '-o', default='SimpleHome', help='Output file basename')
+@click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
 @click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
 @click.option('--max-mortgage/--min-mortgage', default=False)
-def buy_simple(purchaser, price, hoa, time, output, format, max_mortgage):  # pylint: disable=redefined-builtin
+def buy(purchaser, housing, time, output, format, max_mortgage):
     """
     Simple buy calculation with a fixed monthly housing budget.
 
     Home will be sold during the last period of the calculation.
     """
-    purchaser_profile = get_purchaser_profile(purchaser)
-
     periods = time * const.PERIODS_PER_YEAR
-    details = HousingDetail(
-        name=output,
-        price=price,
-        hoa=hoa,
-        type=HousingType.home
-    )
+    purchaser_profile = get_purchaser_profile(purchaser)
+    details = get_housing_detail(housing)
 
     mortgage_cls = MaxMortgage if max_mortgage else MinMortgage
 
@@ -134,73 +190,22 @@ def buy_simple(purchaser, price, hoa, time, output, format, max_mortgage):  # py
         periods=periods + 1
     )
 
-    outputs.write(format, details, budget_items, expenses)
+    outputs.write(format, details, budget_items, expenses, output)
 
 
-@buy.command(name='zillow')
+@click.command()
 @click.argument('purchaser')
-@click.argument('link')
-@click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculations')
-@click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
-@click.option('--max-mortgage/--min-mortgage', default=False)
-def buy_zillow(purchaser, link, time, format, max_mortgage):  # pylint: disable=redefined-builtin
-    """Perform computation using Zillow shareable property link"""
-    purchaser_profile = get_purchaser_profile(purchaser)
-
-    periods = time * const.PERIODS_PER_YEAR
-    details = clients.zillow.get_home_details(link)
-
-    mortgage_cls = MaxMortgage if max_mortgage else MinMortgage
-
-    budget_items = [
-        HomeLifetime(
-            name=f'{details.name}',
-            lifetime=list(range(periods)),
-            price=details.price,
-            hoa_fee=details.hoa,
-            property_tax_rate=details.property_tax_rate
-        ),
-        mortgage_cls(
-            price=details.price,
-            start=0,
-        ),
-        Investment(purchaser_profile.cash),
-    ]
-
-    budget = MonthlyBudget(purchaser_profile.budget)
-
-    expenses = compute(
-        budget,
-        budget_items,
-        periods=periods + 1
-    )
-
-    outputs.write(format, details, budget_items, expenses)
-
-
-@click.group()
-def rent():
-    """Subset of calculations available for renting housing"""
-
-
-@rent.command(name='simple')
-@click.argument('purchaser')
-@click.argument('rent', type=click.INT)
+@click.argument('housing')
 @click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
-@click.option('--output', '-o', default='SimpleRental', help='Output files base name')
+@click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
 @click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
-def rent_simple(purchaser, rent, time, output, format):  # pylint: disable=redefined-builtin,redefined-outer-name
+def rent(purchaser, housing, time, output, format):  # pylint: disable=redefined-builtin,redefined-outer-name
     """
     Simple rental calculation with a fixed monthly housing budget.
     """
-    purchaser_profile = get_purchaser_profile(purchaser)
-
     periods = time * const.PERIODS_PER_YEAR
-    details = HousingDetail(
-        name=output,
-        price=rent,
-        type=HousingType.rental
-    )
+    purchaser_profile = get_purchaser_profile(purchaser)
+    details = get_housing_detail(housing)
 
     budget_items = [
         Rent(rent),
@@ -215,7 +220,7 @@ def rent_simple(purchaser, rent, time, output, format):  # pylint: disable=redef
         periods=periods + 1
     )
 
-    outputs.write(format, details, budget_items, expenses)
+    outputs.write(format, details, budget_items, expenses, output)
 
 
 @click.group()
@@ -223,9 +228,10 @@ def cli():
     pass
 
 
+cli.add_command(profiles)
+cli.add_command(housing)
 cli.add_command(buy)
 cli.add_command(rent)
-cli.add_command(profiles)
 
 
 def main():

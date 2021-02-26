@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from jinja2 import Template
@@ -103,12 +104,14 @@ TEMPLATE = Template("""
 
 def write_html(details: HousingDetail,
                budget_items: List[BudgetItem],
-               expenses: List[MonthlyExpense]):
+               expenses: List[MonthlyExpense],
+               directory: str):
     """Write all computation results to html output file"""
+    output_file = os.path.join(directory, f'{details.name}.html')
     asset_headers, asset_rows = common.get_asset_table(budget_items, len(expenses) - 1)
     expense_headers, expense_rows = common.get_expense_table(expenses)
 
-    with open(f'{details.name}.html', 'w') as output_fd:
+    with open(output_file, 'w') as output_fd:
         output_fd.write(TEMPLATE.render(
             details=details,
             asset_headers=asset_headers,

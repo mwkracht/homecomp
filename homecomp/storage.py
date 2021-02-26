@@ -1,5 +1,7 @@
 import json
 import operator
+import os
+import shutil
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -88,10 +90,20 @@ class DataclassFileStorage:
             with open(self.filename, 'r') as storage_fd:
                 self.data = json.loads(storage_fd.read())
         except FileNotFoundError:
-            pass
+            with open(self.filename, 'w') as storage_fd:
+                storage_fd.write(json.dumps(self.data))
 
         return self
 
     def __exit__(self, *args, **kwargs):
-        with open(self.filename, 'w') as storage_fd:
-            storage_fd.write(json.dumps(self.data))
+        backup_filename = f'{self.filename}.backup'
+        shutil.copy(self.filename, backup_filename)
+
+        try:
+            with open(self.filename, 'w') as storage_fd:
+                storage_fd.write(json.dumps(self.data))
+        except:
+            shutil.move(backup_filename, self.filename)
+            raise
+        else:
+            os.remove(backup_filename)

@@ -1,3 +1,15 @@
+class ClientError(Exception):
+    """Generic client exception"""
+
+
+class CaptchaError(ClientError):
+    """Raised on client responses that include captcha verifications"""
+
+
+class ClientNotSupported(ClientError):
+    """Raised when making a request to a URL with no client"""
+
+
 class StorageError(Exception):
     """Generic storage exception"""
 

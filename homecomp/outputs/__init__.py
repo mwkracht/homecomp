@@ -18,8 +18,9 @@ DEFAULT_FORMAT = FORMATS[0]
 def write(choice: str,
           details: HousingDetail,
           budget_items: List[BudgetItem],
-          expenses: List[MonthlyExpense]):
+          expenses: List[MonthlyExpense],
+          directory: str):
     if choice not in FORMATS:
         raise ValueError(f'{choice} is not an acceptable format')
 
-    return FORMAT_MAP[choice](details, budget_items, expenses)
+    return FORMAT_MAP[choice](details, budget_items, expenses, directory)
