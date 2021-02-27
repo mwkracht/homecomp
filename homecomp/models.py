@@ -19,7 +19,7 @@ class HousingType(Enum):
 class HousingDetail:
     name: str
     price: int
-    type: HousingType
+    type: str
     link: str = None
     image: str = None
     hoa: int = 0
@@ -35,6 +35,7 @@ class PurchaserProfile:
     name: str
     cash: int
     budget: int
+    mortgage_type: str = 'min'
 
 
 @dataclass

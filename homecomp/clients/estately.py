@@ -54,8 +54,14 @@ def get_home_details(shareable_link: str) -> HousingDetail:
     else:
         hoa = 0
 
+    hoa_amenities = soup.find('dt', {'class': 'home-attributes-list-label'}, text='HOA/Condo/Coop Fee:')
+    if hoa_amenities:
+        hoa_amenities = hoa_amenities.find_next_sibling('dd').get_text(strip=True).split(', ')
+
     tax = soup.find('dt', {'class': 'home-attributes-list-label'}, text='Tax Annual Amount:')
-    if tax:
+    if hoa_amenities and 'Taxes' in hoa_amenities:
+        effective_tax_rate = 0
+    elif tax:
         tax = currency_to_int(tax.find_next_sibling('dd').get_text(strip=True))
         effective_tax_rate = tax / price
     else:

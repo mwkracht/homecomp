@@ -35,6 +35,12 @@ def get_housing_detail(name: str) -> HousingDetail:
         raise click.ClickException(f'No housing found for {name}') from error
 
 
+def get_mortage_cls(profile: PurchaserProfile) -> type:
+    return {
+        'min': MinMortgage,
+        'max': MaxMortgage,
+    }[profile.mortgage_type]
+
 
 @click.group()
 def profiles():
@@ -45,12 +51,14 @@ def profiles():
 @click.argument('name')
 @click.argument('cash', type=click.INT)
 @click.argument('budget', type=click.INT)
-def profiles_add(name, cash, budget):
+@click.option('--max-mortgage/--min-mortgage', default=False)
+def profiles_add(name, cash, budget, max_mortgage):
     with DataclassFileStorage() as storage:
         profile = PurchaserProfile(
             name=name,
             cash=cash,
-            budget=budget
+            budget=budget,
+            mortgage_type='max' if max_mortgage else 'min'
         )
 
         storage.profiles.save(profile, overwrite=False)
@@ -60,12 +68,14 @@ def profiles_add(name, cash, budget):
 @click.argument('name')
 @click.argument('cash', type=click.INT)
 @click.argument('budget', type=click.INT)
-def profiles_update(name, cash, budget):
+@click.option('--max-mortgage/--min-mortgage', default=False)
+def profiles_update(name, cash, budget, max_mortgage):
     with DataclassFileStorage() as storage:
         profile = PurchaserProfile(
             name=name,
             cash=cash,
-            budget=budget
+            budget=budget,
+            mortgage_type='max' if max_mortgage else 'min'
         )
 
         storage.profiles.save(profile)
@@ -172,8 +182,7 @@ def housing_remove(name):
 @click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
 @click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
 @click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
-@click.option('--max-mortgage/--min-mortgage', default=False)
-def buy(purchaser, housing, time, output, format, max_mortgage):
+def buy(purchaser, housing, time, output, format):
     """
     Simple buy calculation with a fixed monthly housing budget.
 
@@ -181,15 +190,15 @@ def buy(purchaser, housing, time, output, format, max_mortgage):
     """
     periods = time * const.PERIODS_PER_YEAR
     purchaser = get_purchaser_profile(purchaser)
+    mortgage_cls = get_mortage_cls(purchaser)
     details = get_housing_detail(housing)
-
-    mortgage_cls = MaxMortgage if max_mortgage else MinMortgage
 
     budget_items = [
         HomeLifetime(
             name=f'{details.name}',
             lifetime=list(range(periods)),
             price=details.price,
+            property_tax_rate=details.property_tax_rate,
             hoa_fee=details.hoa
         ),
         mortgage_cls(

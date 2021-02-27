@@ -18,6 +18,13 @@ HEADERS = {
 }
 
 
+def currency_to_int(value: str) -> int:
+    if not value:
+        return 0
+
+    return int(value.strip().strip('monthly').strip('$').replace(',', ''))
+
+
 def get_home_details(shareable_link: str) -> HousingDetail:
     """
     Return all home details which can be used for computation values.
@@ -33,12 +40,6 @@ def get_home_details(shareable_link: str) -> HousingDetail:
 
     name = soup.find('title').get_text(strip=True).split('|')[0].strip()
 
-    # price = next(soup.find('div', {'class': 'ds-summary-row'}).children).get_text(strip=True)
-    # price = int(price.strip('$').replace(',', ''))
-
-    # hoa = soup.find('span', text='HOA:').next_sibling.get_text(strip=True)
-    # hoa = int(hoa.strip('$').replace(',', '').strip(' monthly'))
-
     # instead of searching across HTML fields pull this giant json scipt field and
     # wrangle details form that - hopefully this doesn't change :)
     data = json.loads(next(soup.find(id='hdpApolloPreloadedData').children))
@@ -46,14 +47,25 @@ def get_home_details(shareable_link: str) -> HousingDetail:
     full_data_key = next(key for key in cache if 'FullRenderQuery' in key)
     home = cache[full_data_key]['property']
 
+    hoa = currency_to_int(home['resoFacts']['associationFee']) \
+          or currency_to_int(home['resoFacts']['associationFee2'])
+
+    hoa_amenities = home['resoFacts'].get('associationFeeIncludes') or []
+    hoa_amenities += home['resoFacts'].get('associationFee2Includes') or []
+    if 'Taxes' in hoa_amenities:
+        property_tax_rate = 0
+    else:
+        # effective property tax rate based on price instead of actual assessed value
+        property_tax_rate = home['resoFacts']['taxAnnualAmount'] / home['price']
+
     return HousingDetail(
         name=name,
         type=const.HOUSING_TYPE_HOME,
         link=shareable_link,
         image=home['mediumImageLink'],
         price=home['price'],
-        hoa=home['monthlyHoaFee'],
-        property_tax_rate=home['propertyTaxRate'] / 100,
+        hoa=hoa,
+        property_tax_rate=property_tax_rate,
         bedrooms=home['bedrooms'],
         bathrooms=home['bathrooms'],
         home_size=home['livingArea'],
