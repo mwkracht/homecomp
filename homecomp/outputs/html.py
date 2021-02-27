@@ -24,7 +24,12 @@ TEMPLATE = Template("""
 <body>
 <main class="container">
     <div class="text-center py-5 px-3">
-        <h2 class="text-center py-5">{{ details.name }}</h2>
+        <div class="text-center py-5">
+            <h2>{{ details.name }}</h2>
+            <h5>Cost: <span class="text-danger">{{ average_cost }}/mo<span></h5>
+            <h5>Gains: <span class="text-success">{{ asset_delta }}<span></h5>
+            <h5>Time: {{ asset_rows[:-1] | length }} months<span></h5>
+        </div>
         <div class="container">
             <div class="row">
                 <div class="col">
@@ -37,6 +42,9 @@ TEMPLATE = Template("""
                         <li class="list-group-item">Bathrooms: {{ details.bathrooms if details.bathrooms else 'Unknown' }}</li>
                         <li class="list-group-item">Home size (sqft): {{ details.home_size if details.home_size else 'Unknown' }}</li>
                         <li class="list-group-item">Lot size (sqft): {{ details.lot_size if details.lot_size else 'Unknown' }}</li>
+                        {% if details.hoa %}
+                        <li class="list-group-item">HOA: {{ "${:,.2f}".format(details.hoa) }}</li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
@@ -119,4 +127,6 @@ def write_html(details: HousingDetail,
             expense_header_spans=common.get_header_spans(expense_headers),
             expense_headers=expense_headers,
             expense_rows=expense_rows,
+            asset_delta=common.get_asset_delta(budget_items),
+            average_cost=common.get_average_cost(expenses),
         ))

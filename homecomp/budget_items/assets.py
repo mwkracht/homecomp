@@ -89,7 +89,10 @@ class Home(AssetMixin, BudgetItem):
         buying_costs = self.price * self.buying_costs_rate
         down_payment = self.price * self.down_payment_pct
 
-        return MonthlyExpense(costs=-(buying_costs + down_payment))
+        return MonthlyExpense(
+            costs=-buying_costs,
+            savings=-down_payment
+        )
 
     def _selling_step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Clear asset value and add liquid asset value to budget minus selling costs"""        
@@ -98,7 +101,10 @@ class Home(AssetMixin, BudgetItem):
 
         self.value = 0
 
-        return MonthlyExpense(savings=sell_price - selling_costs)
+        return MonthlyExpense(
+            costs=-selling_costs,
+            savings=sell_price
+        )
 
     def _step(self, budget: MonthlyBudget) -> MonthlyExpense:
         """Calculate cost for current period"""

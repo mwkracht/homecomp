@@ -86,7 +86,8 @@ def profiles_list(name):
 def profiles_remove(name):
     try:
         with DataclassFileStorage() as storage:
-            storage.profiles.delete(name)
+            _profile = storage.housing.find(name)
+            storage.profiles.delete(_profile.name)
     except errors.NoEntryFound:
         click.echo(f'No profile found for {name}')
 
@@ -98,9 +99,22 @@ def housing():
 
 @housing.command(name='add')
 @click.option('--link', '-l', help='Shareable link to housing')
-def housing_add(link):
+@click.option('--name', '-n')
+@click.option('--price', '-p', type=click.INT, help='Monthly rent or list price')
+@click.option(
+    '--type', '-t',
+    type=click.Choice(const.HOUSING_TYPES),
+    default=const.HOUSING_TYPE_HOME
+)
+def housing_add(link, name, price, type):
     if link:
         _housing = clients.get_home_details(link)
+    elif name and price and type:
+        _housing = HousingDetail(
+            name=name,
+            price=price,
+            type=type
+        )
     else:
         raise click.UsageError('Must provide link or name, price, type inputs')
 
@@ -110,7 +124,8 @@ def housing_add(link):
 
 @housing.command(name='update')
 @click.argument('name')
-def housing_update(name):
+def housing_refresh(name):
+    """Reload most recent housing details from link"""
     try:
         with DataclassFileStorage() as storage:
             _housing = storage.housing.find(name)
@@ -121,7 +136,7 @@ def housing_update(name):
             if _housing.link:
                 _housing = clients.get_home_details(_housing.link)
             else:
-                raise click.ClickException('Can only update housing with link')
+                raise click.ClickException('Can only refresh housing with link')
 
             storage.housing.save(_housing)
 
@@ -135,8 +150,9 @@ def housing_list(name):
     with DataclassFileStorage() as storage:
         _housings = storage.housing.find_all(name[0]) if name else storage.housing
 
-        for _housing in _housings:
-            click.echo(_housing)
+        for idx, _housing in enumerate(_housings):
+            price = outputs.format_currency(_housing.price)
+            click.echo(f'{idx}\t{_housing.type}\t{price}\t{_housing.name}')
 
 
 @housing.command(name='remove')
@@ -144,7 +160,8 @@ def housing_list(name):
 def housing_remove(name):
     try:
         with DataclassFileStorage() as storage:
-            storage.housing.delete(name)
+            _housing = storage.housing.find(name)
+            storage.housing.delete(_housing.name)
     except errors.NoEntryFound:
         click.echo(f'No housing found for {name}')
 
@@ -163,7 +180,7 @@ def buy(purchaser, housing, time, output, format, max_mortgage):
     Home will be sold during the last period of the calculation.
     """
     periods = time * const.PERIODS_PER_YEAR
-    purchaser_profile = get_purchaser_profile(purchaser)
+    purchaser = get_purchaser_profile(purchaser)
     details = get_housing_detail(housing)
 
     mortgage_cls = MaxMortgage if max_mortgage else MinMortgage
@@ -179,10 +196,10 @@ def buy(purchaser, housing, time, output, format, max_mortgage):
             price=details.price,
             start=0,
         ),
-        Investment(purchaser_profile.cash),
+        Investment(purchaser.cash),
     ]
 
-    budget = MonthlyBudget(purchaser_profile.budget)
+    budget = MonthlyBudget(purchaser.budget)
 
     expenses = compute(
         budget,
@@ -190,7 +207,8 @@ def buy(purchaser, housing, time, output, format, max_mortgage):
         periods=periods + 1
     )
 
-    outputs.write(format, details, budget_items, expenses, output)
+    output_dir = os.path.join(output, purchaser.name)
+    outputs.write(format, details, budget_items, expenses, output_dir)
 
 
 @click.command()
@@ -204,15 +222,15 @@ def rent(purchaser, housing, time, output, format):  # pylint: disable=redefined
     Simple rental calculation with a fixed monthly housing budget.
     """
     periods = time * const.PERIODS_PER_YEAR
-    purchaser_profile = get_purchaser_profile(purchaser)
+    purchaser = get_purchaser_profile(purchaser)
     details = get_housing_detail(housing)
 
     budget_items = [
-        Rent(rent),
-        Investment(purchaser_profile.cash),
+        Rent(details.price),
+        Investment(purchaser.cash),
     ]
 
-    budget = MonthlyBudget(purchaser_profile.budget)
+    budget = MonthlyBudget(purchaser.budget)
 
     expenses = compute(
         budget,
@@ -220,7 +238,8 @@ def rent(purchaser, housing, time, output, format):  # pylint: disable=redefined
         periods=periods + 1
     )
 
-    outputs.write(format, details, budget_items, expenses, output)
+    output_dir = os.path.join(output, purchaser.name)
+    outputs.write(format, details, budget_items, expenses, output_dir)
 
 
 @click.group()

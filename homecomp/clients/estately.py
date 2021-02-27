@@ -17,7 +17,7 @@ HEADERS = {
 
 def currency_to_int(value):
     """Convert currency string to integer"""
-    return int(value.strip('$').replace(',', ''))
+    return int(value.strip('$').strip('/mo.').replace(',', ''))
 
 
 def parse_details_li(items, key, default=None):
@@ -47,9 +47,12 @@ def get_home_details(shareable_link: str) -> HousingDetail:
     price = soup.find('h2', {'class': 'price-block-sale-price'}).get_text(strip=True)
     price = currency_to_int(price)
 
-    hoa = soup.find('dt', {'class': 'home-attributes-list-label'}, text='HOA:')
-    hoa = hoa.find_next_sibling('dd').get_text(strip=True)
-    hoa = 0 if hoa == 'No' else currency_to_int(hoa)
+    hoa = soup.find('small', text='HOA')
+    if hoa:
+        hoa = hoa.find_next_sibling('div').get_text(strip=True)
+        hoa = currency_to_int(hoa)
+    else:
+        hoa = 0
 
     tax = soup.find('dt', {'class': 'home-attributes-list-label'}, text='Tax Annual Amount:')
     if tax:

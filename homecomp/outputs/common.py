@@ -62,6 +62,30 @@ def get_asset_table(budget_items: List[BudgetItem], periods: int) -> Tuple:
     return headers, rows
 
 
+def get_asset_delta(budget_items: List[BudgetItem]) -> str:
+    networth_items = get_networth_items(budget_items)
+
+    final_value = sum(item.value for item in networth_items.values())
+    init_value = sum(item.values[const.INIT_PERIOD] for item in networth_items.values())
+
+    gains = final_value - init_value
+    return format_currency(gains)
+
+
+def get_average_cost(expenses: List[MonthlyExpense]) -> str:
+    """
+    Return the average montly cost of expenses over lifetime.
+
+    This will not take into account appreciation of any assets. This value will
+    deviate from most home buying vs. renting calculators because those calculators do
+    use home appreciation to offset costs. The asset delta should be used when
+    comparing against other calculators.
+    """
+    return format_currency(
+        -sum(expense.costs for expense in expenses) / len(expenses)
+    )
+
+
 def _traverse_expense(expense: MonthlyExpense, column: str = '') -> Dict:
     """
     Build an expense row by traversing expense tree.

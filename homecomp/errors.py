@@ -7,7 +7,7 @@ class CaptchaError(ClientError):
 
 
 class ClientNotSupported(ClientError):
-    """Raised when making a request to a URL with no client"""
+    """Raised when making a request to a URL with no client implementation"""
 
 
 class StorageError(Exception):

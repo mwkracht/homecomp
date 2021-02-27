@@ -1,8 +1,10 @@
 from typing import List
+import os
 
 from homecomp.models import BudgetItem
 from homecomp.models import HousingDetail
 from homecomp.models import MonthlyExpense
+from homecomp.outputs.common import format_currency
 from homecomp.outputs.csv import write_csv
 from homecomp.outputs.html import write_html
 
@@ -22,5 +24,7 @@ def write(choice: str,
           directory: str):
     if choice not in FORMATS:
         raise ValueError(f'{choice} is not an acceptable format')
+
+    os.makedirs(directory, exist_ok=True)
 
     return FORMAT_MAP[choice](details, budget_items, expenses, directory)
