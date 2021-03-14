@@ -4,7 +4,6 @@ from abc import ABC
 from abc import ABCMeta
 from dataclasses import dataclass
 from dataclasses import field
-from enum import Enum
 from typing import List
 
 from homecomp import const

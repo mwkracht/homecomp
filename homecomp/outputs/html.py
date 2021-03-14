@@ -180,7 +180,7 @@ MULTI_YEAR_TEMPLATE = Template("""
                 {% endfor %}
                 </tr>
                 <tr>
-                    <th scope="col">Time</th>
+                    <th scope="col">Year</th>
                 {% for _ in details %}
                     <th scope="col">Cost</th>
                     <th scope="col">Gains</th>

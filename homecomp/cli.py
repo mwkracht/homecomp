@@ -10,7 +10,6 @@ from homecomp import errors
 from homecomp import outputs
 from homecomp.models import PurchaserProfile
 from homecomp.models import HousingDetail
-from homecomp.models import MonthlyBudget
 from homecomp.outputs.html import write_multi_year
 from homecomp.outputs.common import get_asset_delta
 from homecomp.outputs.common import get_average_cost

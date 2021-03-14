@@ -53,7 +53,7 @@ def buy(purchaser: PurchaserProfile,
         'min': MinMortgage,
         'max': MaxMortgage,
     }[purchaser.mortgage_type]
-    
+
     budget_items = [
         HomeLifetime(
             name=f'{housing.name}',
