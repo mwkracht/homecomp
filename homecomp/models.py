@@ -10,11 +10,6 @@ from typing import List
 from homecomp import const
 
 
-class HousingType(Enum):
-    home = 1  # pylint: disable=invalid-name
-    rental = 2  # pylint: disable=invalid-name
-
-
 @dataclass
 class HousingDetail:
     name: str
@@ -36,6 +31,7 @@ class PurchaserProfile:
     cash: int
     budget: int
     mortgage_type: str = 'min'
+    home_appreciation: float = const.DEFAULT_HOME_APPRECIATION
 
 
 @dataclass

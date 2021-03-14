@@ -6,6 +6,7 @@ from jinja2 import Template
 from homecomp.models import BudgetItem
 from homecomp.models import HousingDetail
 from homecomp.models import MonthlyExpense
+from homecomp.models import PurchaserProfile
 from homecomp.outputs import common
 
 
@@ -129,4 +130,94 @@ def write_html(details: HousingDetail,
             expense_rows=expense_rows,
             asset_delta=common.get_asset_delta(budget_items),
             average_cost=common.get_average_cost(expenses),
+        ))
+
+
+MULTI_YEAR_TEMPLATE = Template("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- bootstrap css only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css"
+          integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl"
+          rel="stylesheet"
+          crossorigin="anonymous">
+
+    <style>
+        table tr td:nth-child(2n) {
+            border-left: 2px solid black;
+        }
+        table tr:nth-child(5n) {
+            border-bottom: 1px solid black;
+        }
+        img{
+            height:150px
+            width:auto;/*maintain aspect ratio*/
+            max-width:150px;
+        }
+    </style>
+
+    <title>Multi Year {{ purchaser.name }}</title>
+</head>
+<body>
+<main class="container">
+    <div class="text-center py-3 px-3 table-responsive">
+        <h3 class="py-2">Multi Year comparison for {{ purchaser.name }} profile</h3>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col"></th>
+                {% for detail in details %}
+                    <th colspan="2" scope="col">
+                    {% if detail.link %}
+                        <a href="{{ detail.link }}"><img src="{{ detail.image }}" alt="Home Image"></a>
+                    {% else %}
+                        {{ detail.name.split(',')[0] }}
+                    {% endif %}
+                        <br/>
+                        {{ "${:,.2f}".format(detail.price) }}
+                    </th>
+                {% endfor %}
+                </tr>
+                <tr>
+                    <th scope="col">Time</th>
+                {% for _ in details %}
+                    <th scope="col">Cost</th>
+                    <th scope="col">Gains</th>
+                {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <th scope="row" style="white-space:nowrap">{{loop.index}}</th>
+                {% for item in row %}
+                    <td style="white-space:nowrap">{{ item }}</td>
+                {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
+""")
+
+
+def write_multi_year(details: List[HousingDetail],
+                     rows: List[List[str]],
+                     purchaser: PurchaserProfile,
+                     directory: str):
+    """Write multi year comparison table to html output file"""
+    directory = os.path.join(directory, purchaser.name)
+    os.makedirs(directory, exist_ok=True)
+
+    output_file = os.path.join(directory, 'multi_year.html')
+
+    with open(output_file, 'w') as output_fd:
+        output_fd.write(MULTI_YEAR_TEMPLATE.render(
+            details=details,
+            rows=rows,
+            purchaser=purchaser
         ))

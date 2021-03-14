@@ -1,5 +1,6 @@
 # pylint: disable=too-many-arguments,redefined-outer-name,redefined-builtin
 import os
+from itertools import product
 
 import click
 
@@ -10,12 +11,10 @@ from homecomp import outputs
 from homecomp.models import PurchaserProfile
 from homecomp.models import HousingDetail
 from homecomp.models import MonthlyBudget
-from homecomp.budget_items.assets import Investment
-from homecomp.budget_items.composite import HomeLifetime
-from homecomp.budget_items.liabilities import MaxMortgage
-from homecomp.budget_items.liabilities import MinMortgage
-from homecomp.budget_items.misc import Rent
-from homecomp.compute import compute
+from homecomp.outputs.html import write_multi_year
+from homecomp.outputs.common import get_asset_delta
+from homecomp.outputs.common import get_average_cost
+from homecomp import compute
 from homecomp.storage import DataclassFileStorage
 
 
@@ -35,13 +34,6 @@ def get_housing_detail(name: str) -> HousingDetail:
         raise click.ClickException(f'No housing found for {name}') from error
 
 
-def get_mortage_cls(profile: PurchaserProfile) -> type:
-    return {
-        'min': MinMortgage,
-        'max': MaxMortgage,
-    }[profile.mortgage_type]
-
-
 @click.group()
 def profiles():
     """Commands for manipulating purchasing profiles"""
@@ -52,13 +44,15 @@ def profiles():
 @click.argument('cash', type=click.INT)
 @click.argument('budget', type=click.INT)
 @click.option('--max-mortgage/--min-mortgage', default=False)
-def profiles_add(name, cash, budget, max_mortgage):
+@click.option('--yearly-appreciation', type=click.FLOAT, default=const.DEFAULT_HOME_APPRECIATION)
+def profiles_add(name, cash, budget, max_mortgage, yearly_appreciation):
     with DataclassFileStorage() as storage:
         profile = PurchaserProfile(
             name=name,
             cash=cash,
             budget=budget,
-            mortgage_type='max' if max_mortgage else 'min'
+            mortgage_type='max' if max_mortgage else 'min',
+            home_appreciation=yearly_appreciation,
         )
 
         storage.profiles.save(profile, overwrite=False)
@@ -69,13 +63,15 @@ def profiles_add(name, cash, budget, max_mortgage):
 @click.argument('cash', type=click.INT)
 @click.argument('budget', type=click.INT)
 @click.option('--max-mortgage/--min-mortgage', default=False)
-def profiles_update(name, cash, budget, max_mortgage):
+@click.option('--yearly-appreciation', type=click.FLOAT, default=const.DEFAULT_HOME_APPRECIATION)
+def profiles_update(name, cash, budget, max_mortgage, yearly_appreciation):
     with DataclassFileStorage() as storage:
         profile = PurchaserProfile(
             name=name,
             cash=cash,
             budget=budget,
-            mortgage_type='max' if max_mortgage else 'min'
+            mortgage_type='max' if max_mortgage else 'min',
+            home_appreciation=yearly_appreciation,
         )
 
         storage.profiles.save(profile)
@@ -96,7 +92,7 @@ def profiles_list(name):
 def profiles_remove(name):
     try:
         with DataclassFileStorage() as storage:
-            _profile = storage.housing.find(name)
+            _profile = storage.profiles.find(name)
             storage.profiles.delete(_profile.name)
     except errors.NoEntryFound:
         click.echo(f'No profile found for {name}')
@@ -176,44 +172,15 @@ def housing_remove(name):
         click.echo(f'No housing found for {name}')
 
 
-@click.command()
-@click.argument('purchaser')
-@click.argument('housing')
-@click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
-@click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
-@click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
-def buy(purchaser, housing, time, output, format):
-    """
-    Simple buy calculation with a fixed monthly housing budget.
+def _run(purchaser, housing, time, output, format):
+    purchaser = get_purchaser_profile(purchaser) if isinstance(purchaser, str) else purchaser
+    details = get_housing_detail(housing) if isinstance(housing, str) else housing
 
-    Home will be sold during the last period of the calculation.
-    """
-    periods = time * const.PERIODS_PER_YEAR
-    purchaser = get_purchaser_profile(purchaser)
-    mortgage_cls = get_mortage_cls(purchaser)
-    details = get_housing_detail(housing)
-
-    budget_items = [
-        HomeLifetime(
-            name=f'{details.name}',
-            lifetime=list(range(periods)),
-            price=details.price,
-            property_tax_rate=details.property_tax_rate,
-            hoa_fee=details.hoa
-        ),
-        mortgage_cls(
-            price=details.price,
-            start=0,
-        ),
-        Investment(purchaser.cash),
-    ]
-
-    budget = MonthlyBudget(purchaser.budget)
-
-    expenses = compute(
-        budget,
-        budget_items,
-        periods=periods + 1
+    method = compute.buy if details.type == const.HOUSING_TYPE_HOME else compute.rent
+    expenses, budget_items = method(
+        purchaser=purchaser,
+        housing=details,
+        years=time
     )
 
     output_dir = os.path.join(output, purchaser.name)
@@ -226,29 +193,61 @@ def buy(purchaser, housing, time, output, format):
 @click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
 @click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
 @click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
-def rent(purchaser, housing, time, output, format):  # pylint: disable=redefined-builtin,redefined-outer-name
+def run(purchaser, housing, time, output, format):
+    """Run a single housing computation for the given profile"""
+    _run(purchaser, housing, time, output, format)
+
+
+@click.command()
+@click.option('--time', '-t', type=click.INT, default=5, help='Number of years to run calculation')
+@click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
+@click.option('--format', type=click.Choice(outputs.FORMATS), default=outputs.DEFAULT_FORMAT)
+def run_all(time, output, format):
+    """Run all buy/rent calculations crossing each housing option with each profile"""
+    with DataclassFileStorage() as storage:
+        for purchaser, details in product(storage.profiles, storage.housing):
+            _run(purchaser, details, time, output, format)
+
+
+@click.command()
+@click.argument('purchaser')
+@click.argument('limit', type=click.INT)
+@click.option('--output', '-o', default=os.getenv('HOUSING_DIR', '.'), help='Output directory')
+def multi_year(purchaser, limit, output):
     """
-    Simple rental calculation with a fixed monthly housing budget.
+    Run all buy/rent calculations over different time ranges with simplified output.
+
+    Calculations will be run from 1 to limit number of years.
     """
-    periods = time * const.PERIODS_PER_YEAR
     purchaser = get_purchaser_profile(purchaser)
-    details = get_housing_detail(housing)
 
-    budget_items = [
-        Rent(details.price),
-        Investment(purchaser.cash),
-    ]
+    with DataclassFileStorage() as storage:
+        rows = []
 
-    budget = MonthlyBudget(purchaser.budget)
+        for time in range(1, limit + 1):
+            row = []
 
-    expenses = compute(
-        budget,
-        budget_items,
-        periods=periods + 1
-    )
+            for details in storage.housing:
+                method = compute.buy if details.type == const.HOUSING_TYPE_HOME else compute.rent
+                expenses, budget_items = method(
+                    purchaser=purchaser,
+                    housing=details,
+                    years=time
+                )
 
-    output_dir = os.path.join(output, purchaser.name)
-    outputs.write(format, details, budget_items, expenses, output_dir)
+                row.extend([
+                    get_average_cost(expenses),
+                    get_asset_delta(budget_items),
+                ])
+
+            rows.append(row)
+
+        write_multi_year(
+            storage.housing,
+            rows,
+            purchaser=purchaser,
+            directory=output
+        )
 
 
 @click.group()
@@ -258,8 +257,9 @@ def cli():
 
 cli.add_command(profiles)
 cli.add_command(housing)
-cli.add_command(buy)
-cli.add_command(rent)
+cli.add_command(run)
+cli.add_command(run_all)
+cli.add_command(multi_year)
 
 
 def main():
